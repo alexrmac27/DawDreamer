@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: alexrmac27/juce
-          ref: piano
+          ref: coldpiano
           token: ${{ secrets.COLDPIANO_REPO_TOKEN || github.token }}
           path: external/juce-coldpiano
 
