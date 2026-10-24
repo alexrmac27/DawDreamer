@@ -50,13 +50,13 @@ jobs:
         shell: pwsh
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          $repoPath = "external/juce-coldpiano"
+          $repoPath = "external/juce-coldpiano/ColdPiano_Phase8_Complete/ColdPiano_Phase8"
           $jucerFile = Get-ChildItem -Path $repoPath -Filter "*.jucer" -File -Recurse |
             Select-Object -First 1
 
           if (Test-Path (Join-Path $repoPath "CMakeLists.txt")) {
             cmake -S $repoPath -B build-coldpiano -A x64 -DCMAKE_BUILD_TYPE=Release
-            cmake --build build-coldpiano --config Release --target Coldpiano_VST3
+            cmake --build build-coldpiano --config Release --target ColdPiano_VST3
           } elseif ($null -ne $jucerFile) {
             $projucerCmake = Join-Path $repoPath "extras/Projucer/Builds/CMake"
             cmake -S $projucerCmake -B build-projucer -A x64 -DCMAKE_BUILD_TYPE=Release
