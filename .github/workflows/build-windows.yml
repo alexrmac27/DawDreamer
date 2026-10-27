@@ -55,6 +55,20 @@ jobs:
             Select-Object -First 1
 
           if (Test-Path (Join-Path $repoPath "CMakeLists.txt")) {
+            $cmakeListsPath = Join-Path $repoPath "CMakeLists.txt"
+            $cmakeLists = Get-Content -Raw $cmakeListsPath
+            if ($cmakeLists -notmatch 'juce_generate_juce_header\(ColdPiano\)') {
+              $targetSources = "target_sources(ColdPiano PRIVATE"
+              if (-not $cmakeLists.Contains($targetSources)) {
+                throw "Could not find the ColdPiano target_sources declaration."
+              }
+              $cmakeLists = $cmakeLists.Replace(
+                $targetSources,
+                "juce_generate_juce_header(ColdPiano)`n`n$targetSources"
+              )
+              Set-Content -Path $cmakeListsPath -Value $cmakeLists -NoNewline
+            }
+
             cmake -S $repoPath -B build-coldpiano -A x64 -DCMAKE_BUILD_TYPE=Release
             cmake --build build-coldpiano --config Release --target ColdPiano_VST3
           } elseif ($null -ne $jucerFile) {
