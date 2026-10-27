@@ -55,6 +55,8 @@ jobs:
             Select-Object -First 1
 
           if (Test-Path (Join-Path $repoPath "CMakeLists.txt")) {
+            Add-Content -Path (Join-Path $repoPath "CMakeLists.txt") `
+              -Value "`njuce_generate_juce_header(ColdPiano)"
             cmake -S $repoPath -B build-coldpiano -A x64 -DCMAKE_BUILD_TYPE=Release
             cmake --build build-coldpiano --config Release --target ColdPiano_VST3
           } elseif ($null -ne $jucerFile) {
