@@ -1,0 +1,71 @@
+diff --git a/ColdPiano_Phase8_Complete/ColdPiano_Phase8/CMakeLists.txt b/ColdPiano_Phase8_Complete/ColdPiano_Phase8/CMakeLists.txt
+index ca5ce68..b9db3d8 100644
+--- a/ColdPiano_Phase8_Complete/ColdPiano_Phase8/CMakeLists.txt
++++ b/ColdPiano_Phase8_Complete/ColdPiano_Phase8/CMakeLists.txt
+@@ -34,6 +34,8 @@ juce_add_plugin(ColdPiano
+     PRODUCT_NAME "Cold Piano"
+ )
+ 
++juce_generate_juce_header(ColdPiano)
++
+ target_sources(ColdPiano PRIVATE
+     Source/PluginProcessor.cpp
+     Source/PluginProcessor.h
+diff --git a/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/PluginProcessor.cpp b/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/PluginProcessor.cpp
+index c6e9765..9b115b0 100644
+--- a/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/PluginProcessor.cpp
++++ b/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/PluginProcessor.cpp
+@@ -115,7 +115,7 @@ void ColdPianoAudioProcessor::loadPianoSamples()
+     for (int i = 0; i < 128; ++i)
+         synth.addVoice(new ColdSamplerVoice());
+ 
+-    synth.setVoiceStealingEnabled(true);
++    synth.setNoteStealingEnabled(true);
+ 
+     // Candidate directories to search for Salamander Grand Piano samples
+     juce::Array<juce::File> candidateDirs;
+@@ -542,7 +542,7 @@ void ColdPianoAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
+         reverbParams.dryLevel = 1.0f - (space * 0.20f);
+         reverbParams.width = 1.0f;
+         reverb.setParameters(reverbParams);
+-        reverb.processStereo(buffer.getWritePointer(0), buffer.getWritePointer(1), buffer.getNumSamples());
++        reverb.process(context);
+     }
+ 
+     // 5. Smoothed Master Gain
+diff --git a/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/SampleGenerator.h b/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/SampleGenerator.h
+index 1375da8..46db220 100644
+--- a/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/SampleGenerator.h
++++ b/ColdPiano_Phase8_Complete/ColdPiano_Phase8/Source/SampleGenerator.h
+@@ -1,5 +1,6 @@
+ #pragma once
+ #include <JuceHeader.h>
++#include <stdexcept>
+ 
+ class SampleGenerator
+ {
+@@ -64,14 +65,18 @@ public:
+     static std::unique_ptr<juce::InputStream> createWavStream(const juce::AudioBuffer<float>& buffer, double sampleRate)
+     {
+         auto memoryBlock = std::make_unique<juce::MemoryBlock>();
+-        juce::MemoryOutputStream out(*memoryBlock, false);
++        auto out = std::make_unique<juce::MemoryOutputStream>(*memoryBlock, false);
+ 
+         juce::WavAudioFormat wav;
+-        if (auto* writer = wav.createWriterFor(&out, sampleRate, (unsigned int)buffer.getNumChannels(), 16, {}, 0))
+-        {
+-            writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples());
+-            delete writer;
+-        }
++        std::unique_ptr<juce::AudioFormatWriter> writer(
++            wav.createWriterFor(out.get(), sampleRate, (unsigned int)buffer.getNumChannels(), 16, {}, 0));
++        if (writer == nullptr)
++            throw std::runtime_error("Failed to create fallback piano sample writer");
++        out.release();
++
++        if (!writer->writeFromAudioSampleBuffer(buffer, 0, buffer.getNumSamples()))
++            throw std::runtime_error("Failed to write fallback piano sample");
++        writer.reset();
+ 
+         return std::make_unique<juce::MemoryInputStream>(*memoryBlock, true);
+     }
